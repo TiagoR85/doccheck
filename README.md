@@ -1,5 +1,7 @@
 # doccheck
 
+[![CI](https://github.com/TiagoR85/doccheck/actions/workflows/ci.yml/badge.svg)](https://github.com/TiagoR85/doccheck/actions/workflows/ci.yml)
+
 Verifica se a **documentação e o código dizem a mesma coisa**.
 
 Existe porque dois problemas diferentes passam despercebidos:
@@ -13,7 +15,7 @@ Existe porque dois problemas diferentes passam despercebidos:
 ## Instalação
 
 ```bash
-pipx install git+ssh://git@github.com/<user>/doccheck   # ou: pip install -e .
+pipx install git+https://github.com/TiagoR85/doccheck.git   # ou: pip install -e .
 doccheck init      # cria .doccheck.json com a stack detectada
 doccheck check     # roda as regras
 doccheck install   # vendoriza em .githooks/ e ativa core.hooksPath
