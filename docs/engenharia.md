@@ -97,14 +97,28 @@ Cada um com teste de regressão hoje. Nenhum deles teria sido pensado sem os rep
 - **Checar `.env.example` contra a doc.** Ruído alto: metade dos nomes citados é de
   serviço de terceiro, não do projeto.
 
+## Teste de fogo do `review --ia` (2026-10-29, deepseek-flash)
+
+Dois cenários controlados no `vendas-desapego`, com verdade conhecida:
+
+| Cenário | O que mudei | O que o modelo devolveu | Tokens |
+|---|---|---|---|
+| **A — código muda, doc fica** | `Program.cs` default 30 → 5, README intacto dizendo 30 | **achou**: `README.md:14 — "a doc diz 30/min" \| "o código diz 5" — atualiza a doc ou o código?` | 781 in / 1013 out (937 de reasoning) |
+| **B — doc muda, código fica** | só o README: 30 → 5, código em 30 | **NADA ENCONTRADO** | 840 in / 241 out |
+
+O cenário B não é falha do prompt: o código **não estava no contexto** (verificado — o
+diff não tocava `.cs` e a doc não citava o arquivo). A conclusão honesta é que a
+ferramenta cobre **drift código → doc**, que é o caso comum (alguém muda o código e
+esquece a doc). O inverso exige levar o código junto, e isso é o próximo passo.
+
+Custo: não estimado na hora porque `DOCCHECK_IA_PRECO_IN/OUT` não estavam definidos — o
+`--max-usd` só protege quando o preço é informado. Com `deepseek-flash` a ordem de
+grandeza é fração de centavo por revisão (≈1,8k tokens).
+
 ## Próximo
 
-`doccheck review --ia` saiu do papel com as decisões que importam: **fora do hook** (o gate
-segue determinístico), **pergunta em vez de patch** (modelo que reescreve doc inventa fato)
-e **custo explícito** (`--max-usd` aborta antes de enviar; a saída mostra tokens e US$).
-Endpoint OpenAI-compatível por ambiente — serve OpenAI, Groq, DeepSeek, Ollama e qualquer
-gateway, sem dependência nova no projeto.
-
-O que ainda falta é coragem de rodar isso nos 31 repositórios e comparar com a auditoria
-manual. A aposta é que ele pega os casos do `vendas-desapego` (rate limit, versão do CDN,
-serviços do compose) — os que nenhuma regra estrutural alcança.
+Fechar o cenário B: incluir no contexto os arquivos de código **citados na doc** e os
+**N mais recentemente modificados** (`git log --name-only`), medindo a taxa de acerto
+antes de anunciar. E rodar o review nos 31 repositórios para comparar com a auditoria
+manual — a aposta é que ele pega os casos do `vendas-desapego` (rate limit, versão do
+CDN, serviços do compose), que nenhuma regra estrutural alcança.

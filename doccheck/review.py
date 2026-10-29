@@ -19,15 +19,17 @@ import urllib.request
 from pathlib import Path
 
 MAX_DIFF = 12000
-MAX_DOC = 12000
-MAX_DOCS = 4
+MAX_DOC = 8000
+MAX_DOCS = 6
 LIMITE_MAX_USD = 0.50
+VIVAS = ("README.md", "MANUAL.md", "manual.md", "STATUS.md", "status.md")
 
-INSTRUCAO = """Você revisa documentação técnica. Recebe um diff, os documentos
-citados nele e os achados de um verificador determinístico.
+INSTRUCAO = """Você revisa documentação técnica. Recebe um diff de código e o
+conteúdo atual das principais documentações do repositório (README, MANUAL, STATUS).
 
-Liste APENAS divergências entre o que a documentação afirma e o que o código faz.
-Formato de cada item, uma linha:
+Liste APENAS divergências entre o que a documentação afirma e o que o código faz —
+inclusive quando o código mudou e a doc não foi atualizada. Formato de cada item,
+uma linha:
 - arquivo:linha — "a doc diz X" | "o código diz Y" — pergunta objetiva (atualiza a doc ou o código?)
 
 Regras: não invente fato que não esteja no material; se faltar evidência, omita;
@@ -51,8 +53,15 @@ def montar_contexto(raiz: Path, ref: str = "HEAD~1") -> dict:
     from .config import carregar
     from .rules import rodar
 
+    # Docs alteradas no diff + docs vivas: o caso real é código mudar e a doc
+    # ficar velha (o diff não traz .md nenhum nesse cenário).
+    escolhidos: list[Path] = []
+    for arq in docs_afetados(raiz, ref) + [Path(n) for n in VIVAS]:
+        if arq not in escolhidos and (raiz / arq).is_file():
+            escolhidos.append(arq)
+
     trechos = []
-    for rel in docs_afetados(raiz, ref)[:MAX_DOCS]:
+    for rel in escolhidos[:MAX_DOCS]:
         texto = (raiz / rel).read_text(encoding="utf-8", errors="ignore")
         trechos.append((rel.as_posix(), texto[:MAX_DOC]))
 

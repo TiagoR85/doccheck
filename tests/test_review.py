@@ -37,6 +37,21 @@ def test_monta_contexto_com_diff_e_docs(tmp_path):
     assert "texto novo" in ctx["docs"][0][1]
 
 
+def test_codigo_muda_e_doc_fica_velha_entra_no_contexto(tmp_path):
+    """Só código no diff: a doc viva (README) precisa entrar para haver comparação."""
+    repo = repo_git(tmp_path)
+    (tmp_path / "app.py").write_text("x = 3\n", encoding="utf-8")
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-q", "-m", "so codigo"], cwd=repo,
+                   check=True, capture_output=True)
+
+    ctx = review.montar_contexto(repo, "HEAD~1")
+    assert "x = 3" in ctx["diff"]
+    nomes = [n for n, _ in ctx["docs"]]
+    assert "README.md" in nomes, nomes
+    assert "texto novo" in dict(ctx["docs"])["README.md"]
+
+
 def test_sem_ia_devolve_contexto_e_nao_chama(tmp_path):
     repo = repo_git(tmp_path)
     r = review.revisar(repo, ref="HEAD~1", usar_ia=False, env={})

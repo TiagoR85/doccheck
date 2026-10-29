@@ -105,6 +105,10 @@ doccheck review --json | jq -r .contexto          # levar o contexto a outro mod
 - `--max-usd` aborta **antes** de enviar quando a estimativa passa o teto.
 - Sem `DOCCHECK_IA_URL` sai 0 e diz que pulou — o contexto continua em `--json`.
 - Saída `--json`: `contexto`, `resposta`, `uso` (tokens) e `custo_usd`.
+- **Limite medido**: pega *drift código → doc* (o código mudou e a doc diz o valor antigo).
+  Doc que muda sozinha não é detectada, porque o código não vai no contexto — ver
+  [docs/engenharia.md](docs/engenharia.md) para os dois cenários e os números.
+- **DeepSeek**: `DOCCHECK_IA_URL=https://api.deepseek.com` e `DOCCHECK_IA_MODEL=deepseek-flash`.
 
 ## Limites (honestos)
 
