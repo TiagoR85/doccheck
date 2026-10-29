@@ -47,6 +47,27 @@ def cmd_install(args) -> int:
     return instalar(_raiz(args.caminho))
 
 
+def cmd_status(args) -> int:
+    from .status import coletar, resumo
+
+    raiz = _raiz(args.caminho)
+    linhas = coletar(raiz)
+    numero = resumo(linhas)
+    if args.json:
+        print(json.dumps({"resumo": numero, "repos": linhas},
+                         ensure_ascii=False, indent=2))
+        return 1 if numero["atrasado"] or numero["ausente"] else 0
+
+    for linha in linhas:
+        versao = linha["versao"] or "-"
+        marca = {"em dia": "  ", "atrasado": "!!", "ausente": "--"}[linha["estado"]]
+        print(f"{marca} {linha['repo']:26} {versao:8} {linha['estado']}")
+    print(f"\ninstalada: {numero['versao_instalada']} · em dia {numero['em dia']} · "
+          f"atrasado {numero['atrasado']} · ausente {numero['ausente']} "
+          f"(de {numero['total']})")
+    return 1 if numero["atrasado"] or numero["ausente"] else 0
+
+
 def cmd_review(args) -> int:
     from .review import revisar
 
@@ -109,6 +130,12 @@ def main(argv=None) -> int:
     p_rev.add_argument("--model", default=None)
     p_rev.add_argument("--json", action="store_true")
     p_rev.set_defaults(funcao=cmd_review)
+
+    p_status = sub.add_parser(
+        "status", help="quem tem o vendor e em que versão (pasta com os repos)")
+    p_status.add_argument("caminho", nargs="?")
+    p_status.add_argument("--json", action="store_true")
+    p_status.set_defaults(funcao=cmd_status)
 
     args = parser.parse_args(argv)
     try:

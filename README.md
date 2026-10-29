@@ -19,11 +19,26 @@ pipx install git+https://github.com/TiagoR85/doccheck.git   # ou: pip install -e
 doccheck init      # cria .doccheck.json com a stack detectada
 doccheck check     # roda as regras
 doccheck install   # vendoriza em .githooks/ e ativa core.hooksPath
+doccheck status    # painel de deriva: quais repos têm o vendor e em que versão
 ```
 
 `install` copia o pacote para `.githooks/doccheck/` e escreve `.githooks/pre-commit`.
 O repo fica **self-contained** (funciona offline, sem depender da ferramenta instalada);
 para atualizar, rode `doccheck install` de novo. O hook é ~0,3 s.
+
+`status` aponte para a pasta que guarda os repositórios e ele lê
+`.githooks/doccheck/__init__.py` de cada um — sem rede, sem confiar em memória:
+
+```bash
+$ doccheck status D:\Projetos
+   my-opencode-hub     0.3.0    em dia
+!! repo-antigo         0.1.0    atrasado
+-- repo-sem-vendor     -        ausente
+
+instalada: 0.3.0 · em dia 31 · atrasado 1 · ausente 3 (de 35)
+```
+
+Sai 1 quando há `atrasado` ou `ausente` (serve de gate de release); `--json` para automação.
 
 ## Regras
 
