@@ -99,7 +99,12 @@ Cada um com teste de regressão hoje. Nenhum deles teria sido pensado sem os rep
 
 ## Próximo
 
-`doccheck review --ia` (fora do hook, opt-in): rascunhar perguntas de revisão a partir do
-diff — "esta mudança alterou o comportamento descrito na seção X?" — usando o modelo que
-a pessoa configurar, com a saída em texto e o custo explícito. Um gate que pergunta é
-aceitável; um gate que adivinha, não.
+`doccheck review --ia` saiu do papel com as decisões que importam: **fora do hook** (o gate
+segue determinístico), **pergunta em vez de patch** (modelo que reescreve doc inventa fato)
+e **custo explícito** (`--max-usd` aborta antes de enviar; a saída mostra tokens e US$).
+Endpoint OpenAI-compatível por ambiente — serve OpenAI, Groq, DeepSeek, Ollama e qualquer
+gateway, sem dependência nova no projeto.
+
+O que ainda falta é coragem de rodar isso nos 31 repositórios e comparar com a auditoria
+manual. A aposta é que ele pega os casos do `vendas-desapego` (rate limit, versão do CDN,
+serviços do compose) — os que nenhuma regra estrutural alcança.

@@ -84,6 +84,28 @@ $ doccheck check
 
 `--json` para uso em CI, `--nao-falhar` para relatório sem bloquear.
 
+## Revisão semântica (`doccheck review`)
+
+Fora do hook, opt-in. **Sem** `--ia`, monta o contexto determinístico e imprime: diff
+desde `--ref`, os `.md` afetados e os achados do check. Com `--ia`, envia esse contexto a
+um endpoint **OpenAI-compatível** e devolve **perguntas com `arquivo:linha`** — nunca um
+patch, nunca um bloqueio.
+
+```bash
+export DOCCHECK_IA_URL=https://api.openai.com/v1   # também Groq, DeepSeek, Ollama, OpenRouter
+export DOCCHECK_IA_KEY=...
+export DOCCHECK_IA_MODEL=gpt-4o-mini               # default
+export DOCCHECK_IA_PRECO_IN=0.15  DOCCHECK_IA_PRECO_OUT=0.60   # US$/1M (opcional)
+
+doccheck review --ia --ref HEAD~3 --max-usd 0.20
+doccheck review --json | jq -r .contexto          # levar o contexto a outro modelo
+```
+
+- **Não é o gate.** O hook continua determinístico e offline; `review` roda quando você quer.
+- `--max-usd` aborta **antes** de enviar quando a estimativa passa o teto.
+- Sem `DOCCHECK_IA_URL` sai 0 e diz que pulou — o contexto continua em `--json`.
+- Saída `--json`: `contexto`, `resposta`, `uso` (tokens) e `custo_usd`.
+
 ## Limites (honestos)
 
 - Não julga **semântica**: um texto pode estar errado e o endpoint existir.

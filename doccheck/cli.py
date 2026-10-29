@@ -47,6 +47,35 @@ def cmd_install(args) -> int:
     return instalar(_raiz(args.caminho))
 
 
+def cmd_review(args) -> int:
+    from .review import revisar
+
+    raiz = _raiz(args.caminho)
+    resultado = revisar(raiz, ref=args.ref, usar_ia=args.ia,
+                        max_usd=args.max_usd, modelo=args.model)
+    if args.json:
+        print(json.dumps(resultado, ensure_ascii=False, indent=2))
+        return 0
+
+    if resultado.get("pulado"):
+        print(f"- IA não usada: {resultado['pulado']}")
+    print(f"contexto: {len(resultado['docs'])} doc(s) afetado(s), "
+          f"{len(resultado['achados'])} achado(s) do check, "
+          f"diff de {args.ref}..HEAD ({len(resultado['contexto'])} chars)")
+    for achado in resultado["achados"]:
+        print(achado)
+    if resultado.get("resposta"):
+        print("\n" + resultado["resposta"])
+        uso = resultado.get("uso") or {}
+        print(f"\n(modelo {resultado.get('modelo')} · "
+              f"{uso.get('prompt_tokens', 0)} in / "
+              f"{uso.get('completion_tokens', 0)} out · "
+              f"US$ {resultado['custo_usd']:.6f})")
+    elif not args.ia:
+        print("\ncontexto pronto — rode com --ia ou use --json para levar a outro modelo")
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="doccheck",
@@ -68,6 +97,18 @@ def main(argv=None) -> int:
     p_inst = sub.add_parser("install", help="vendoriza em .githooks + hook de pre-commit")
     p_inst.add_argument("caminho", nargs="?")
     p_inst.set_defaults(funcao=cmd_install)
+
+    p_rev = sub.add_parser(
+        "review", help="revisão semântica do diff + docs (--ia usa modelo; fora do hook)")
+    p_rev.add_argument("caminho", nargs="?")
+    p_rev.add_argument("--ia", action="store_true",
+                       help="envia o contexto a um endpoint OpenAI-compatível")
+    p_rev.add_argument("--ref", default="HEAD~1", help="base do diff (default HEAD~1)")
+    p_rev.add_argument("--max-usd", type=float, default=0.50,
+                       help="teto de custo estimado antes de enviar (default 0.50)")
+    p_rev.add_argument("--model", default=None)
+    p_rev.add_argument("--json", action="store_true")
+    p_rev.set_defaults(funcao=cmd_review)
 
     args = parser.parse_args(argv)
     try:
