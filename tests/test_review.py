@@ -119,3 +119,81 @@ def test_cli_review_sem_ia_sai_zero(tmp_path, capsys):
     assert codigo == 0
     saida = capsys.readouterr().out
     assert "contexto pronto" in saida
+
+
+# --- cenário B: doc muda sozinha, o código não está no diff -----------------
+
+def _commit(repo: Path, mensagem: str):
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-q", "-m", mensagem], cwd=repo,
+                   check=True, capture_output=True)
+
+
+def test_codigo_citado_na_doc_entra_no_contexto(tmp_path):
+    repo = repo_git(tmp_path)
+    motor = tmp_path / "src" / "motor.py"
+    motor.parent.mkdir()
+    motor.write_text("limite = 30\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("# A\n\no limite fica em `src/motor.py`\n",
+                                        encoding="utf-8")
+    _commit(repo, "doc cita o motor")
+
+    ctx = review.montar_contexto(repo, "HEAD~1")
+    nomes = [n for n, _ in ctx["codigo"]]
+    assert "src/motor.py" in nomes, nomes
+    assert "limite = 30" in dict(ctx["codigo"])["src/motor.py"]
+
+
+def test_ponto_entrada_conhecido_entra_sem_ser_citado(tmp_path):
+    """Auditoria olha compose/Program.cs mesmo quando a doc não cita o caminho."""
+    repo = repo_git(tmp_path)
+    (tmp_path / "docker-compose.yml").write_text(
+        "services:\n  api:\n    image: x\n", encoding="utf-8")
+    _commit(repo, "compose")
+
+    ctx = review.montar_contexto(repo, "HEAD~1")
+    assert "docker-compose.yml" in [n for n, _ in ctx["codigo"]]
+
+
+def test_arquivo_recente_entra_no_contexto(tmp_path):
+    """app.py é alterado no último commit do helper: recorte precisa entrar."""
+    repo = repo_git(tmp_path)
+    ctx = review.montar_contexto(repo, "HEAD~1")
+    codigo = dict(ctx["codigo"])
+    assert "app.py" in codigo, list(codigo)
+    assert "x = 2" in codigo["app.py"]
+
+
+def test_githooks_e_docs_nao_contam_o_codigo_recente(tmp_path):
+    """Vendor (.githooks) e .md não são 'código' — poluição cara no prompt."""
+    repo = repo_git(tmp_path)
+    (tmp_path / ".githooks").mkdir()
+    (tmp_path / ".githooks" / "x.py").write_text("vendor = 1\n", encoding="utf-8")
+    (tmp_path / "nota.md").write_text("nota solta\n", encoding="utf-8")
+    (tmp_path / "z.py").write_text("y = 9\n", encoding="utf-8")
+    _commit(repo, "mistura")
+
+    ctx = review.montar_contexto(repo, "HEAD~1")
+    nomes = [n for n, _ in ctx["codigo"]]
+    assert not any(n.startswith(".githooks") for n in nomes), nomes
+    assert "nota.md" not in nomes, nomes
+
+
+def test_codigo_respeita_o_limite(tmp_path):
+    repo = repo_git(tmp_path)
+    for i in range(review.MAX_CODIGO + 4):
+        (tmp_path / f"m{i}.py").write_text(f"z = {i}\n", encoding="utf-8")
+    _commit(repo, "muitos candidatos")
+
+    ctx = review.montar_contexto(repo, "HEAD~1")
+    assert len(ctx["codigo"]) <= review.MAX_CODIGO
+
+
+def test_prompt_e_revisar_expoe_a_secao_de_codigo(tmp_path):
+    repo = repo_git(tmp_path)
+    ctx = review.montar_contexto(repo, "HEAD~1")
+    prompt = review.montar_prompt(ctx)
+    assert "## Código:" in prompt and "x = 2" in prompt
+
+    r = review.revisar(repo, ref="HEAD~1", usar_ia=False, env={})
+    assert "app.py" in r["codigo"]

@@ -102,9 +102,9 @@ $ doccheck check
 ## Revisão semântica (`doccheck review`)
 
 Fora do hook, opt-in. **Sem** `--ia`, monta o contexto determinístico e imprime: diff
-desde `--ref`, os `.md` afetados e os achados do check. Com `--ia`, envia esse contexto a
-um endpoint **OpenAI-compatível** e devolve **perguntas com `arquivo:linha`** — nunca um
-patch, nunca um bloqueio.
+desde `--ref`, os `.md` afetados, recortes de código e os achados do check. Com `--ia`,
+envia esse contexto a um endpoint **OpenAI-compatível** e devolve **perguntas com
+`arquivo:linha`** — nunca um patch, nunca um bloqueio.
 
 ```bash
 export DOCCHECK_IA_URL=https://api.openai.com/v1   # também Groq, DeepSeek, Ollama, OpenRouter
@@ -119,11 +119,18 @@ doccheck review --json | jq -r .contexto          # levar o contexto a outro mod
 - **Não é o gate.** O hook continua determinístico e offline; `review` roda quando você quer.
 - `--max-usd` aborta **antes** de enviar quando a estimativa passa o teto.
 - Sem `DOCCHECK_IA_URL` sai 0 e diz que pulou — o contexto continua em `--json`.
-- Saída `--json`: `contexto`, `resposta`, `uso` (tokens) e `custo_usd`.
-- **Limite medido**: pega *drift código → doc* (o código mudou e a doc diz o valor antigo).
-  Doc que muda sozinha não é detectada, porque o código não vai no contexto — ver
-  [docs/engenharia.md](docs/engenharia.md) para os dois cenários e os números.
+- Saída `--json`: `contexto`, `resposta`, `uso` (tokens), `custo_usd` e `codigo`.
+- **O contexto inclui código**, não só o diff: até 6 recortes de 4000 caracteres —
+  caminhos que a doc **cita**, **pontos de entrada** (`docker-compose.yml`, `Program.cs`,
+  `index.html`, `app.py`, `Dockerfile`, `package.json`...) e arquivos **alterados
+  recentemente**. Foi isso que fechou o cenário B (doc mentindo sozinha).
+- **Limite medido em 3 repos reais**, cada um no estado *pré-auditoria* e com diff vazio:
+  vendas-desapego **3/3** dos achados manuais, interview-assistant **1/1** (parcial),
+  youtube-gemini-pipeline **0/2** — contagem de testes e mensagem de erro específica no
+  meio de um arquivo grande não são verificáveis com recorte de 4000 caracteres. Números e
+  amostras em [docs/engenharia.md](docs/engenharia.md).
 - **DeepSeek**: `DOCCHECK_IA_URL=https://api.deepseek.com` e `DOCCHECK_IA_MODEL=deepseek-flash`.
+  Com contexto grande o provedor pode passar de 60s — o timeout é de 180s.
 
 ## Limites (honestos)
 

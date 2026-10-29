@@ -99,26 +99,48 @@ Cada um com teste de regressão hoje. Nenhum deles teria sido pensado sem os rep
 
 ## Teste de fogo do `review --ia` (2026-10-29, deepseek-flash)
 
-Dois cenários controlados no `vendas-desapego`, com verdade conhecida:
+Dois cenários controlados, com verdade conhecida:
 
-| Cenário | O que mudei | O que o modelo devolveu | Tokens |
+| Cenário | O que muda | v0.3.1 (diff + docs) | v0.4.0 (diff + docs + recortes de código) |
 |---|---|---|---|
-| **A — código muda, doc fica** | `Program.cs` default 30 → 5, README intacto dizendo 30 | **achou**: `README.md:14 — "a doc diz 30/min" \| "o código diz 5" — atualiza a doc ou o código?` | 781 in / 1013 out (937 de reasoning) |
-| **B — doc muda, código fica** | só o README: 30 → 5, código em 30 | **NADA ENCONTRADO** | 840 in / 241 out |
+| **A — código muda, doc fica** | default 5 → 30 no código, README dizendo 5 | achou `README.md:14` | achou `README.md:14` (383 in / 360 out) |
+| **B — doc muda, código fica** | só o README muda; o código em 30 | **NADA ENCONTRADO** | **achou**: `README.md:3 — "a doc diz 5" \| "o código diz 30 (app.py:1)"` (401 in / 298 out) |
 
-O cenário B não é falha do prompt: o código **não estava no contexto** (verificado — o
-diff não tocava `.cs` e a doc não citava o arquivo). A conclusão honesta é que a
-ferramenta cobre **drift código → doc**, que é o caso comum (alguém muda o código e
-esquece a doc). O inverso exige levar o código junto, e isso é o próximo passo.
+O que fechou o cenário B foi o contexto ganhar código: até 6 recortes de 4000 caracteres,
+vindos de **(a)** caminhos citados na doc, **(b)** pontos de entrada conhecidos
+(`docker-compose.yml`, `Program.cs`, `index.html`, `app.py`, `Dockerfile`, `package.json`…) e
+**(c)** arquivos modificados recentemente (`git log --name-only -8`). Ficam de fora `.md`,
+`.githooks`, `node_modules`, `bin/obj` — poluição cara sem sinal.
 
-Custo: não estimado na hora porque `DOCCHECK_IA_PRECO_IN/OUT` não estavam definidos — o
-`--max-usd` só protege quando o preço é informado. Com `deepseek-flash` a ordem de
-grandeza é fração de centavo por revisão (≈1,8k tokens).
+### Medição em 3 repositórios reais (estado pré-auditoria, diff vazio)
+
+Mesmo desenho, agora contra a auditoria manual dos 31: clone no commit anterior à correção
+da doc + `git commit --allow-empty`, para o diff ficar vazio e a única entrada ser
+**doc × código em repouso**.
+
+| Repo | Achados manuais | O que a IA achou | Acerto |
+|---|---|---|---|
+| vendas-desapego | rate limit 30/min, Tailwind v3 (Play CDN), compose sem nginx | os **três**, cada um com `README.md:linha` e o trecho do código | **3/3** |
+| interview-assistant | 129 testes C# / 13 JS (doc dizia 74/6) | a frase "74 C# + 6 JS" apontando o STATUS inconsistente, não a contagem real | **1/1 parcial** |
+| youtube-gemini-pipeline | 819 testes (doc: 789); mensagens de erro reais | nenhum dos dois | **0/2** |
+
+Precisão dos extras (o que a auditoria manual não tinha): **2 de 2 verificados eram reais** —
+`<title>Code & Drive</title>` no `index.html` do vendas e `URL = 5001` / `{video_id}.txt` no
+youtube.
+
+O padrão é claro: **número que exige contar ou executar** (suite de testes) e **string
+específica no meio de arquivo grande** (mensagem de erro depois dos 4000 caracteres do
+recorte) ficam de fora. O que a ferramenta entrega é o que está na superfície: valor de
+configuração, serviço do compose, versão de CDN, porta, formato de arquivo.
+
+Custo medido: 6,7k / 9,5k / 13,4k tokens de entrada e 5,7k / 17,7k / 29,3k de saída — fração
+de centavo a poucos centavos no `deepseek-flash`. O youtube estourou o timeout de 60s, que
+subiu para **180s** (contexto grande + reasoning longo).
 
 ## Próximo
 
-Fechar o cenário B: incluir no contexto os arquivos de código **citados na doc** e os
-**N mais recentemente modificados** (`git log --name-only`), medindo a taxa de acerto
-antes de anunciar. E rodar o review nos 31 repositórios para comparar com a auditoria
-manual — a aposta é que ele pega os casos do `vendas-desapego` (rate limit, versão do
-CDN, serviços do compose), que nenhuma regra estrutural alcança.
+- **Saída cara em repo grande** (29k tokens de saída no youtube): limitar `max_tokens` ou
+  pedir só os N achados mais graves.
+- **Contagem de testes não é trabalho de IA**: é do `check` — `pytest --collect-only` e
+  comparar com o número citado na doc, determinístico e offline.
+- `--max-usd` só protege com `DOCCHECK_IA_PRECO_IN/OUT` definidos.
