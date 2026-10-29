@@ -89,3 +89,7 @@ $ doccheck check
 - Não julga **semântica**: um texto pode estar errado e o endpoint existir.
 - Chamada de endpoint existe ≠ contrato igual (payload, status).
 - `.env` de produção não é lido; só o do repo.
+
+O registro de engenharia — o experimento que falhou, os bugs de parsing que só apareceram
+em repositórios reais e por que o gate pula em vez de falhar — está em
+[docs/engenharia.md](docs/engenharia.md).
