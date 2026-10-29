@@ -35,7 +35,7 @@ $ doccheck status D:\Projetos
 !! repo-antigo         0.1.0    atrasado
 -- repo-sem-vendor     -        ausente
 
-instalada: 0.4.0 · em dia 31 · atrasado 1 · ausente 3 (de 35)
+instalada: 0.5.0 · em dia 31 · atrasado 1 · ausente 3 (de 35)
 ```
 
 Sai 1 quando há `atrasado` ou `ausente` (serve de gate de release); `--json` para automação.
@@ -47,6 +47,7 @@ Sai 1 quando há `atrasado` ou `ausente` (serve de gate de release); `--json` pa
 | `readme` | sem `README.md` ou vazio |
 | `secoes` | seção (`##`/`###`) sem conteúdo em qualquer `.md` |
 | `versao` | versão/data do `STATUS.md` != topo do `CHANGELOG.md` (aceita changelog por data) |
+| `testes` | **só avisa** (`!`): número de testes citado no README/MANUAL/STATUS diverge em mais de 10% da contagem estática no código |
 | `segredos` | valor de `.env` (`*KEY*`, `*TOKEN*`, `*SECRET*`, `*PASS*`) ou padrão de token (`ghp_`, `github_pat_`, `sk-`, `AKIA`, `AIza`, `PRIVATE KEY`) em `.md` |
 | `endpoints` | a **seção de API** cita `` `/rota` `` que não existe no código |
 
@@ -59,6 +60,19 @@ a usar `--no-verify`, o que mata o mecanismo.
 A doc pode citar APIs de terceiros (OpenCode, GitHub...). Só cobramos rotas cujo prefixo
 o código também define, e só dentro de seções cujo título contém `api`
 (`"secao_api"` no `.doccheck.json`).
+
+### Testes: contagem estática, aviso, nunca veredito
+
+Conta declarações no código — `def test_` (Python), `[Fact]`/`[TestMethod]`/`[Theory]` +
+`[DataRow]`/`[InlineData]` (C#), `test(`/`it(` (JS/TS) — **sem executar a suíte**: o hook é
+offline e tem que ser rápido. Compara com o número citado na doc viva: até 10% de diferença
+é silêncio (parametrização varia o número real), acima disso vira **aviso** — nunca erro,
+porque contagem estática é aproximada e regra que bloqueia precisa ser exata.
+
+Fica de fora: `CHANGELOG` (história), linha dentro de ``` (comando, não afirmação), item de
+checklist (`[x] N testes` é log), `node_modules`, `bin/obj`, `site-packages` e qualquer
+virtualenv (`.venv-test`, `venv-*`). Medido na frota de 31 repos: **3 avisos**, todos
+plausíveis — e o `youtube-gemini-pipeline` casou exato (819).
 
 ## Adaptadores
 
@@ -134,6 +148,9 @@ doccheck review --json | jq -r .contexto          # levar o contexto a outro mod
   amostras em [docs/engenharia.md](docs/engenharia.md).
 - **DeepSeek**: `DOCCHECK_IA_URL=https://api.deepseek.com` e `DOCCHECK_IA_MODEL=deepseek-flash`.
   Com contexto grande o provedor pode passar de 60s — o timeout é de 180s.
+- **Teto de saída**: `max_tokens` 8000 por padrão (`DOCCHECK_IA_MAX_TOKENS` muda). Se a
+  resposta for cortada, o comando avisa (`resposta TRUNCADA em N tokens`) — custo previsível
+  em vez de 29k tokens de reasoning em repo grande.
 
 ## Limites (honestos)
 

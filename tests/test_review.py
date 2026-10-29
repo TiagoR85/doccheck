@@ -197,3 +197,46 @@ def test_prompt_e_revisar_expoe_a_secao_de_codigo(tmp_path):
 
     r = review.revisar(repo, ref="HEAD~1", usar_ia=False, env={})
     assert "app.py" in r["codigo"]
+
+
+# --- item 3: teto de saida (max_tokens) -------------------------------------
+
+def _transporte_fake(chamadas, finish="stop"):
+    def transporte(url, payload, chave):
+        chamadas.append(payload)
+        return {"choices": [{"message": {"content": "ok"}, "finish_reason": finish}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5}}
+    return transporte
+
+
+def test_payload_leva_max_tokens_default(tmp_path):
+    repo = repo_git(tmp_path)
+    chamadas = []
+    env = {"DOCCHECK_IA_URL": "https://api.exemplo/v1", "DOCCHECK_IA_KEY": "k",
+           "DOCCHECK_IA_MODEL": "m"}
+    review.revisar(repo, ref="HEAD~1", usar_ia=True, env=env,
+                   transporte=_transporte_fake(chamadas))
+    assert chamadas[0]["max_tokens"] == review.MAX_TOKENS
+
+
+def test_max_tokens_vem_do_ambiente(tmp_path):
+    repo = repo_git(tmp_path)
+    chamadas = []
+    env = {"DOCCHECK_IA_URL": "https://api.exemplo/v1", "DOCCHECK_IA_KEY": "k",
+           "DOCCHECK_IA_MODEL": "m", "DOCCHECK_IA_MAX_TOKENS": "500"}
+    review.revisar(repo, ref="HEAD~1", usar_ia=True, env=env,
+                   transporte=_transporte_fake(chamadas))
+    assert chamadas[0]["max_tokens"] == 500
+
+
+def test_resposta_truncada_e_sinalizada(tmp_path):
+    repo = repo_git(tmp_path)
+    env = {"DOCCHECK_IA_URL": "https://api.exemplo/v1", "DOCCHECK_IA_KEY": "k",
+           "DOCCHECK_IA_MODEL": "m", "DOCCHECK_IA_MAX_TOKENS": "500"}
+    r = review.revisar(repo, ref="HEAD~1", usar_ia=True, env=env,
+                       transporte=_transporte_fake([], finish="length"))
+    assert r["truncada"] is True
+
+    r2 = review.revisar(repo, ref="HEAD~1", usar_ia=True, env=env,
+                        transporte=_transporte_fake([]))
+    assert r2["truncada"] is False

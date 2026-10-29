@@ -137,10 +137,28 @@ Custo medido: 6,7k / 9,5k / 13,4k tokens de entrada e 5,7k / 17,7k / 29,3k de sa
 de centavo a poucos centavos no `deepseek-flash`. O youtube estourou o timeout de 60s, que
 subiu para **180s** (contexto grande + reasoning longo).
 
+## Contagem de testes no gate (v0.5.0)
+
+A IA não sabe contar: no B3 ela errou a contagem de testes justamente nos dois repos onde o
+achado existia. Isso não é trabalho de modelo, é de regra. `testes` conta declarações no
+código — `def test_`, `[Fact]`/`[TestMethod]`/`[Theory]` + `[DataRow]`/`[InlineData]`,
+`test(`/`it(` — **sem executar a suíte**, e compara com o número citado na doc viva.
+
+Duas calibrações vieram da frota, não do desenho:
+
+1. **`.venv-test/Lib/site-packages/numpy/tests/`** entrava na conta: **8164 "testes"** no
+   SmartCondominiumGuard. Virtualenv tem nome livre — o filtro corta qualquer pasta que
+   comece com `.venv`/`venv-`, além de `site-packages`.
+2. **Histórico não é afirmação**: `pytest -q  # 663 testes` dentro de um bloco de código e
+   `- [x] 182 testes MSTest` (checklist) viravam aviso. Bloco ``` e item de checklist ficaram
+   de fora, junto com `CHANGELOG`.
+
+Resultado na frota: 35 linhas com "testes" → **3 avisos**, e o `youtube-gemini-pipeline`
+casou exato (819 estáticos = 819 citados). A regra **nunca bloqueia**: contagem estática é
+aproximada (parametrização, `InlineData`, fixtures) e gate que bloqueia precisa ser exato.
+
 ## Próximo
 
-- **Saída cara em repo grande** (29k tokens de saída no youtube): limitar `max_tokens` ou
-  pedir só os N achados mais graves.
-- **Contagem de testes não é trabalho de IA**: é do `check` — `pytest --collect-only` e
-  comparar com o número citado na doc, determinístico e offline.
-- `--max-usd` só protege com `DOCCHECK_IA_PRECO_IN/OUT` definidos.
+- `--max-usd` só protege com `DOCCHECK_IA_PRECO_IN/OUT` definidos (teto do rate card).
+- Resposta truncada agora avisa (`max_tokens` 8000), mas não escolhe os achados mais graves:
+  pedir ordenação por severidade no prompt é o passo seguinte.
