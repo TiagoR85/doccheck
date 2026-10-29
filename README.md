@@ -117,7 +117,10 @@ doccheck review --json | jq -r .contexto          # levar o contexto a outro mod
 ```
 
 - **Não é o gate.** O hook continua determinístico e offline; `review` roda quando você quer.
-- `--max-usd` aborta **antes** de enviar quando a estimativa passa o teto.
+- `--max-usd` aborta **antes** de enviar quando a estimativa passa o teto — para isso
+  `DOCCHECK_IA_PRECO_IN/OUT` precisam estar definidos. No DeepSeek `deepseek-flash` use o
+  **teto** do rate card (peak, cache miss): `0.30` e `1.20` US$/1M — off-peak é metade, então
+  errar para cima é o lado certo de um teto.
 - Sem `DOCCHECK_IA_URL` sai 0 e diz que pulou — o contexto continua em `--json`.
 - Saída `--json`: `contexto`, `resposta`, `uso` (tokens), `custo_usd` e `codigo`.
 - **O contexto inclui código**, não só o diff: até 6 recortes de 4000 caracteres —
