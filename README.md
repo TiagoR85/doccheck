@@ -35,7 +35,7 @@ $ doccheck status D:\Projetos
 !! repo-antigo         0.1.0    atrasado
 -- repo-sem-vendor     -        ausente
 
-instalada: 0.3.1 · em dia 31 · atrasado 1 · ausente 3 (de 35)
+instalada: 0.4.0 · em dia 31 · atrasado 1 · ausente 3 (de 35)
 ```
 
 Sai 1 quando há `atrasado` ou `ausente` (serve de gate de release); `--json` para automação.
