@@ -281,6 +281,48 @@ def test_stack_desconhecida_e_pulada(tmp_path):
     assert rel.ok and any("stack não reconhecida" in p for p in rel.puladas)
 
 
+# ------------------------------------------------------------------- stack
+def test_stack_dotnet_divergente_falha(tmp_path):
+    """README diz .NET 8, csproj está em net10.0 — README desatualizado."""
+    montar(tmp_path, {
+        "README.md": README + "\nStack: .NET 8 + Redis\n",
+        "src/App.csproj": "<Project><PropertyGroup>"
+                          "<TargetFramework>net10.0</TargetFramework>"
+                          "</PropertyGroup></Project>",
+    })
+    ok, saida = verificar(tmp_path)
+    assert not ok and ".NET 8" in saida and "net10.0" in saida
+
+
+def test_stack_dotnet_igual_passa(tmp_path):
+    montar(tmp_path, {
+        "README.md": README + "\nStack: .NET 10 + Redis\n",
+        "src/App.csproj": "<Project><PropertyGroup>"
+                          "<TargetFramework>net10.0</TargetFramework>"
+                          "</PropertyGroup></Project>",
+    })
+    ok, saida = verificar(tmp_path)
+    assert ok, saida
+
+
+def test_stack_ignora_nome_de_pacote_akka_net(tmp_path):
+    """'Akka.NET 1.5' / 'Grpc.Net 2.19' não são a versão do framework."""
+    montar(tmp_path, {
+        "README.md": README + "\nAkka.NET 1.5 + Grpc.Net 2.19\n",
+        "src/App.csproj": "<Project><PropertyGroup>"
+                          "<TargetFramework>net10.0</TargetFramework>"
+                          "</PropertyGroup></Project>",
+    })
+    ok, saida = verificar(tmp_path)
+    assert ok, saida
+
+
+def test_stack_sem_csproj_e_pulada(tmp_path):
+    montar(tmp_path, {"README.md": README + "\nStack: .NET 8\n"})
+    rel = rodar(tmp_path, config.carregar(tmp_path))
+    assert rel.ok and any("stack" in p for p in rel.puladas)
+
+
 # ------------------------------------------------------------------ config
 def test_wildcard_e_query_string_nao_sao_rotas(tmp_path):
     """`/api/*` é padrão e `?x=1` é query — nenhum dos dois é rota."""

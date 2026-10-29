@@ -14,7 +14,7 @@ PADRAO = {
         "**/node_modules/**", "**/bin/**", "**/obj/**", "**/.git/**",
     ],
     "regras": {"readme": True, "secoes": True, "versao": True,
-               "segredos": True, "endpoints": True},
+               "stack": True, "segredos": True, "endpoints": True},
     "status": None,
     "changelog": None,
     "stack": None,
