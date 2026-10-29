@@ -1,0 +1,16 @@
+name: docs
+
+# Primeiro consumidor do reusable-doccheck (dogfood): o gate de documentação
+# roda no próprio doccheck. Se ele quebrar aqui, quebrou em todo mundo.
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  doccheck:
+    uses: TiagoR85/ci-pipeline-templates/.github/workflows/reusable-doccheck.yml@v1
