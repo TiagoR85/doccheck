@@ -324,6 +324,18 @@ def test_unreleased_vazio_e_convencao(tmp_path):
     assert ok, saida
 
 
+def test_config_ignore_e_aditivo(tmp_path):
+    """`ignore` no .doccheck.json soma aos padrões, não os substitui."""
+    montar(tmp_path, {
+        "README.md": README,
+        "docs/superpowers/plans/x.md": "## Vazia\n\n",
+        "NOTAS-EXTERNAS.md": "## Vazia\n\n",
+        ".doccheck.json": json.dumps({"ignore": ["NOTAS-EXTERNAS.md"]}),
+    })
+    ok, saida = verificar(tmp_path)
+    assert ok, saida
+
+
 def test_config_desliga_regra(tmp_path):
     montar(tmp_path, {
         "README.md": README + "\n## Vazia\n\n",

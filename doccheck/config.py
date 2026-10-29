@@ -32,6 +32,9 @@ def carregar(raiz: Path) -> dict:
         for chave, valor in dados.items():
             if chave == "regras":
                 cfg["regras"].update(valor or {})
+            elif chave == "ignore":
+                # aditivo: o repo acrescenta exclusões, não perde os padrões
+                cfg["ignore"] = list(dict.fromkeys(cfg["ignore"] + (valor or [])))
             else:
                 cfg[chave] = valor
     return cfg
